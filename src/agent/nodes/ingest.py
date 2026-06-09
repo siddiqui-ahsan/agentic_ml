@@ -1,7 +1,7 @@
 # agent/nodes/ingest.py
 
 import pandas as pd
-from agent.graph import AgentState
+from src.agent.graph import AgentState
 
 def ingest_node(state: AgentState) -> AgentState:
     """Load CSVs — tries multiple encodings, survives broken files."""

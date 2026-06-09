@@ -1,6 +1,6 @@
 # agent/run.py
 
-from agent.graph import build_agent, AgentState
+from src.agent.graph import build_agent, AgentState
 
 def run_agent(train_path: str, test_path: str, output_path: str) -> str:
     agent = build_agent()

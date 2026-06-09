@@ -1,16 +1,16 @@
-# agent/graph.py
+# src/agent/graph.py
 import os
 import pandas as pd
 import numpy as np
 from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, END
 
-from agent.nodes.ingest      import ingest_node
-from agent.nodes.schema      import schema_repair_node
-from agent.nodes.llm_extract import llm_extract_node
-from agent.nodes.ml_train    import ml_train_node
-from agent.nodes.predict     import predict_node
-from agent.nodes.output      import output_node
+from src.agent.nodes.ingest      import ingest_node
+from src.agent.nodes.schema      import schema_repair_node
+from src.agent.nodes.llm_extract import llm_extract_node
+from src.agent.nodes.ml_train    import ml_train_node
+from src.agent.nodes.predict     import predict_node
+from src.agent.nodes.output      import output_node
 
 # ── 1. State Definition ───────────────────────────────────────────────────────
 # Everything the agent knows — passed between every node

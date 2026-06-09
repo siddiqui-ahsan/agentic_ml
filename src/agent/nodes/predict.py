@@ -1,7 +1,7 @@
 # src/agent/nodes/predict.py
 
 import pandas as pd
-from agent.nodes.ml_train import normalize_columns, safe_select_features, ALL_FEATURE_COLS
+from src.agent.nodes.ml_train import normalize_columns, safe_select_features, ALL_FEATURE_COLS
 
 
 def predict_node(state: dict) -> dict:
