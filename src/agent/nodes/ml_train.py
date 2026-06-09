@@ -5,11 +5,12 @@ import pandas as pd
 import numpy as np
 from sklearn.pipeline import Pipeline
 from sklearn.compose import ColumnTransformer
-from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, FunctionTransformer
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.base import BaseEstimator, TransformerMixin
+from sklearn.utils.class_weight import compute_sample_weight
+from xgboost import XGBClassifier                          # ← XGBoost statt GradientBoosting
 
 # ── 1. Column Definitions ─────────────────────────────────────────────────────
 
@@ -23,8 +24,6 @@ TARGET_COL     = "price_tier"
 ALL_FEATURE_COLS = TABULAR_GEO + TABULAR_SKEWED + TABULAR_CAT + [TEXT_COL]
 
 # ── 2. Column Normalization ───────────────────────────────────────────────────
-# Second safety net — schema_repair_node runs first, but validation.csv
-# might arrive directly here without going through the full graph.
 
 COLUMN_ALIASES = {
     "description":        ["desc", "listing_description", "name", "about",
@@ -93,7 +92,6 @@ class TextCleaner(BaseEstimator, TransformerMixin):
     def _clean(self, text: str) -> str:
         text = text.lower()
         text = re.sub(r'\(website hidden by airbnb\)', '', text)
-        # unicode-safe: keeps ü, é, ñ — NOT [^a-zA-Z\s] which destroys them
         text = re.sub(r'[^\w\s]', ' ', text, flags=re.UNICODE)
         text = re.sub(r'\s+', ' ', text).strip()
         return text
@@ -152,11 +150,12 @@ def _build_pipeline(flag_cols: list, use_tfidf: bool) -> Pipeline:
 
     return Pipeline([
         ("preprocessor", preprocessor),
-        ("classifier", GradientBoostingClassifier(
+        ("classifier", XGBClassifier(        # ← XGBoost
             n_estimators=200,
             max_depth=5,
             learning_rate=0.05,
             subsample=0.8,
+            eval_metric="mlogloss",          # verhindert sklearn-Warning
             random_state=42,
         )),
     ])
@@ -168,7 +167,7 @@ def ml_train_node(state: dict) -> dict:
     print("▶ Node: ml_train")
     print(f"  LLM fallback active: {state['llm_failed']}")
 
-    # Step 1: Normalize columns (safety net — schema node ran first, but just in case)
+    # Step 1: Normalize columns
     train_df = normalize_columns(state["train_df"])
 
     # Step 2: Merge LLM flags if available
@@ -179,7 +178,7 @@ def ml_train_node(state: dict) -> dict:
     else:
         flag_cols = []
 
-    # Step 3: Safely select only the columns we need — never crashes on missing cols
+    # Step 3: Safely select only the columns we need
     feature_cols = ALL_FEATURE_COLS + flag_cols
     X_train = safe_select_features(train_df, feature_cols)
     y_train = train_df[TARGET_COL]
@@ -187,9 +186,20 @@ def ml_train_node(state: dict) -> dict:
     print(f"  Training on {len(X_train)} rows, {len(feature_cols)} features")
     print(f"  Flag columns: {flag_cols if flag_cols else 'none — using TF-IDF fallback'}")
 
-    # Step 4: Build and fit
+    # Step 4: Build pipeline
     pipeline = _build_pipeline(flag_cols, use_tfidf=state["llm_failed"])
-    pipeline.fit(X_train, y_train)
+
+    # Step 5: Compute sample weights so Tier 3 (10% of data) is not ignored
+    # "balanced" automatically calculates: n_samples / (n_classes * n_samples_per_class)
+    sample_weights = compute_sample_weight(class_weight="balanced", y=y_train)
+    print(f"  Sample weights — unique values: {np.unique(sample_weights).round(2)}")
+
+    # Step 6: Fit — pass weights through the pipeline via classifier__ prefix
+    pipeline.fit(
+        X_train,
+        y_train,
+        classifier__sample_weight=sample_weights,   # ← XGBoost bekommt die Gewichte
+    )
 
     return {**state,
         "pipeline":     pipeline,
