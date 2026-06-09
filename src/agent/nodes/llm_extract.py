@@ -1,6 +1,6 @@
 # src/agent/nodes/llm_extract.py
 
-from src.agent.graph import AgentState
+from src.agent.state import AgentState
 from src.llm_feature_extractor import extract_flags_batch
 
 def llm_extract_node(state: AgentState) -> AgentState:
