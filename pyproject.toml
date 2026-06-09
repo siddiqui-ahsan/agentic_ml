@@ -1,11 +1,29 @@
 [project]
 name = "agentic-ml"
 version = "0.1.0"
-description = "Add your description here"
+description = "LangGraph agent for Airbnb price tier prediction"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
     "numpy>=2.4.6",
     "pandas>=3.0.3",
     "scikit-learn>=1.9.0",
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.30.0",
+    "langgraph>=0.2.0",
+    "langchain>=0.3.0",
+    "requests>=2.32.0",
+    "tqdm>=4.66.0",
+    "python-multipart>=0.0.9",
 ]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+# Railway liest diesen Befehl und startet damit den Server
+[tool.uv]
+dev-dependencies = []
+
+[project.scripts]
+start = "uvicorn main:app --host 0.0.0.0 --port $PORT"
