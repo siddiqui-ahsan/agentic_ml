@@ -1,7 +1,7 @@
 # src/agent/state.py
 
 import pandas as pd
-from typing import TypedDict, Optional
+from typing import TypedDict, Optional, Any
 
 
 class AgentState(TypedDict):
@@ -11,6 +11,11 @@ class AgentState(TypedDict):
     train_flags:     Optional[pd.DataFrame]
     test_flags:      Optional[pd.DataFrame]
     predictions:     Optional[pd.Series]
+    property_ids:    Optional[pd.Series]
+
+    # ML
+    pipeline:        Optional[Any]       # fitted sklearn Pipeline
+    flag_cols:       list[str]           # LLM flag column names
 
     # Control flow
     errors:          list[str]

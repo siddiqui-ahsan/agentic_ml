@@ -1,23 +1,32 @@
-# agent/run.py
+# src/agent/run.py
 
-from src.agent.graph import build_agent, AgentState
+from src.agent.graph import build_agent
+from src.agent.state import AgentState
+
 
 def run_agent(train_path: str, test_path: str, output_path: str) -> str:
     agent = build_agent()
 
     initial_state: AgentState = {
-        "train_df":    None,
-        "test_df":     None,
-        "train_flags": None,
-        "test_flags":  None,
-        "predictions": None,
-        "errors":      [],
-        "retry_count": 0,
-        "llm_failed":  False,
+        # Data
+        "train_df":     None,
+        "test_df":      None,
+        "train_flags":  None,
+        "test_flags":   None,
+        "predictions":  None,
+        "property_ids": None,
+        # ML
+        "pipeline":     None,
+        "flag_cols":    [],
+        # Control flow
+        "errors":       [],
+        "retry_count":  0,
+        "llm_failed":   False,
         "current_node": "start",
-        "train_path":  train_path,
-        "test_path":   test_path,
-        "output_path": output_path,
+        # Config
+        "train_path":   train_path,
+        "test_path":    test_path,
+        "output_path":  output_path,
     }
 
     final_state = agent.invoke(initial_state)
