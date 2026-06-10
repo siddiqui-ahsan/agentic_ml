@@ -2,7 +2,8 @@
 
 from src.agent.graph import build_agent
 from src.agent.state import AgentState
-
+from dotenv import load_dotenv
+load_dotenv()  # liest .env Datei automatisch
 
 def run_agent(train_path: str, test_path: str, output_path: str) -> str:
     agent = build_agent()
