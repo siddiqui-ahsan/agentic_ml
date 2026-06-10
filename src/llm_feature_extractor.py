@@ -55,11 +55,7 @@ OPENROUTER_MODEL = "meta-llama/llama-3.1-8b-instruct:free"
 def call_openrouter(prompt: str) -> Optional[str]:
     api_key = os.environ.get("OPENROUTER_API_KEY")
     if not api_key:
-        raise EnvironmentError(
-            "OPENROUTER_API_KEY nicht gesetzt!\n"
-            "Entweder: export OPENROUTER_API_KEY='sk-or-...'\n"
-            "Oder: .env Datei mit OPENROUTER_API_KEY=sk-or-... erstellen"
-        )
+        raise EnvironmentError("OPENROUTER_API_KEY nicht gesetzt!")
     try:
         response = requests.post(
             "https://openrouter.ai/api/v1/chat/completions",
@@ -75,7 +71,20 @@ def call_openrouter(prompt: str) -> Optional[str]:
             },
             timeout=30,
         )
-        return response.json()["choices"][0]["message"]["content"]
+        data = response.json()
+
+        # Rate limit oder API-Fehler abfangen
+        if "error" in data:
+            msg = data["error"].get("message", "")
+            code = data["error"].get("code", 0)
+            if code == 429 or "rate" in msg.lower():
+                print("  Rate limit — warte 5s")
+                time.sleep(5)
+            else:
+                print(f"  OpenRouter error: {msg}")
+            return None
+
+        return data["choices"][0]["message"]["content"]
     except Exception as e:
         print(f"OpenRouter error: {e}")
         return None
@@ -113,7 +122,7 @@ def _process_row(args: tuple) -> tuple[int, dict]:
  
     # Rate limit schutz: free tier erlaubt ~20 req/min
     # Mit max_workers=5 und 0.3s sleep bleiben wir sicher darunter
-    time.sleep(0.3)
+    time.sleep(0.5)
  
     raw   = call_openrouter(prompt)
     flags = parse_flags(raw)
@@ -128,11 +137,11 @@ def _process_row(args: tuple) -> tuple[int, dict]:
 def extract_flags_batch(
     df: pd.DataFrame,
     text_col: str = "description",
-    max_workers: int = 5,    # free tier: 20 req/min -> 5 threads x 0.3s sleep = ~17 req/min
+    max_workers: int = 3,    # free tier: 20 req/min -> 3 threads x 0.5s sleep = ~12 req/min
 ) -> pd.DataFrame:
     """
     Schickt max_workers Zeilen gleichzeitig an OpenRouter.
-    Rate limit des free tiers (20 req/min) wird durch time.sleep(0.3) eingehalten.
+    Rate limit des free tiers (20 req/min) wird durch time.sleep(0.5) eingehalten.
     Reihenfolge bleibt erhalten (results[i] = flags fuer Zeile i).
     Erwartete Zeit: 1800 Zeilen / 17 req/min = ~17 Minuten
     """
