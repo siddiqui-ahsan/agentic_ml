@@ -5,8 +5,7 @@ import shutil
 import tempfile
 
 from fastapi import FastAPI, File, UploadFile, HTTPException
-from fastapi.responses import FileResponse
-from starlette.background import BackgroundTask
+from fastapi.responses import Response
 
 from src.agent.run import run_agent
 
@@ -27,7 +26,7 @@ def health():
 @app.get("/info")
 def info():
     return {
-        "model":     "GradientBoostingClassifier + TF-IDF fallback",
+        "model":     "XGBoost + BERT + TF-IDF",
         "framework": "LangGraph + FastAPI",
         "tiers":     {0: "Budget", 1: "Standard", 2: "Premium", 3: "Ultra-Luxury"},
     }
@@ -55,17 +54,22 @@ async def predict(
             output_path=output_path,
         )
 
-        # Cleanup happens AFTER the file is sent — not before
-        return FileResponse(
-            path=result_path,
+        # Read CSV into memory and return as plain bytes —
+        # avoids FileResponse keeping the connection open (Railway proxy timeout)
+        with open(result_path, "rb") as f:
+            csv_bytes = f.read()
+
+        return Response(
+            content=csv_bytes,
             media_type="text/csv",
-            filename="predictions.csv",
-            background=BackgroundTask(shutil.rmtree, tmp_dir, True),
+            headers={"Content-Disposition": "attachment; filename=predictions.csv"},
         )
 
     except Exception as e:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
         raise HTTPException(status_code=500, detail=f"Agent failed: {str(e)}")
+
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 if __name__ == "__main__":

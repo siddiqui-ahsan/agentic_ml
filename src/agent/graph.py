@@ -2,13 +2,10 @@
 
 from langgraph.graph import StateGraph, END
 
-from src.agent.state             import AgentState
-from src.agent.nodes.ingest      import ingest_node
-from src.agent.nodes.schema      import schema_repair_node
-from src.agent.nodes.llm_extract import llm_extract_node
-from src.agent.nodes.ml_train    import ml_train_node
-from src.agent.nodes.predict     import predict_node
-from src.agent.nodes.output      import output_node
+from src.agent.state                import AgentState
+from src.agent.nodes.data           import ingest_node, schema_repair_node, llm_extract_node
+from src.agent.nodes.model          import ml_train_node, predict_node, output_node
+
 
 
 def build_agent() -> StateGraph:
