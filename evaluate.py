@@ -2,20 +2,16 @@
 
 import requests
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, f1_score
 
 RAILWAY_URL = "https://agenticml-production.up.railway.app/predict"
 
-# ── 1. Split train.csv + Embeddings in 80/20 ─────────────────────────────────
+# ── 1. Lade train.csv + validation_full.csv ───────────────────────────────────
 print("Lade Daten...")
-train_df = pd.read_csv("data/train.csv")
-train_emb = pd.read_csv("data/train_embeddings.csv")
-
-train_split, val_split, emb_train, emb_val = train_test_split(
-    train_df, train_emb,
-    test_size=0.2, random_state=42, stratify=train_df["price_tier"]
-)
+train_split = pd.read_csv("data/train.csv")
+val_split   = pd.read_csv("data/validation_full.csv")
+emb_train   = pd.read_csv("data/train_embeddings.csv")
+emb_val     = pd.read_csv("data/validation_full_embeddings.csv")
 
 val_features = val_split.drop(columns=["price_tier"])
 
@@ -26,7 +22,7 @@ emb_train.to_csv("/tmp/emb_train.csv",         index=False)
 emb_val.to_csv("/tmp/emb_val.csv",             index=False)
 
 print(f"Training:   {len(train_split)} rows")
-print(f"Validation: {len(val_split)} rows")
+print(f"Test:       {len(val_split)} rows")
 print(f"Label-Verteilung:\n{val_split['price_tier'].value_counts().sort_index()}\n")
 
 # ── 2. Request an Railway ─────────────────────────────────────────────────────

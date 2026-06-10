@@ -37,7 +37,7 @@ def compute_embeddings(csv_path: str, output_path: str):
     emb_df.to_csv(output_path, index=False)
     print(f"  Gespeichert: {output_path} ({emb_df.shape[1]} Spalten)")
 
-compute_embeddings("data/train.csv", "data/train_embeddings.csv")
-compute_embeddings("data/test.csv",  "data/test_embeddings.csv")
+compute_embeddings("data/train.csv",            "data/train_embeddings.csv")
+compute_embeddings("data/validation_full.csv", "data/validation_full_embeddings.csv")
 
 print("\nFertig! Fuehre jetzt evaluate.py aus.")
