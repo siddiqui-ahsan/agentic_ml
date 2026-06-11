@@ -1,44 +1,47 @@
-# evaluate.py — lokal ausführen: python evaluate.py
+# evaluate.py — lokal ausfuehren: uv run python evaluate.py
 
 import requests
 import pandas as pd
-from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, f1_score
 
 RAILWAY_URL = "https://agenticml-production.up.railway.app/predict"
 
-# ── 1. Split train.csv in 80% Training / 20% Validation ──────────────────────
+# ── 1. Lade train.csv + validation_full.csv ───────────────────────────────────
 print("Lade Daten...")
-train_df = pd.read_csv("data/train.csv")
+train_split = pd.read_csv("data/train.csv")
+val_split   = pd.read_csv("data/validation_full.csv")
+emb_train   = pd.read_csv("data/train_embeddings.csv")
+emb_val     = pd.read_csv("data/validation_full_embeddings.csv")
 
-train_split, val_split = train_test_split(
-    train_df, test_size=0.2, random_state=42, stratify=train_df["price_tier"]
-)
-
-# Val-Features ohne Labels
 val_features = val_split.drop(columns=["price_tier"])
 
-# Temporär speichern
-train_split.to_csv("/tmp/train_split.csv", index=False)
-val_features.to_csv("/tmp/val_features.csv", index=False)
+# Temporaer speichern
+train_split.to_csv("/tmp/train_split.csv",     index=False)
+val_features.to_csv("/tmp/val_features.csv",   index=False)
+emb_train.to_csv("/tmp/emb_train.csv",         index=False)
+emb_val.to_csv("/tmp/emb_val.csv",             index=False)
 
 print(f"Training:   {len(train_split)} rows")
-print(f"Validation: {len(val_split)} rows")
+print(f"Test:       {len(val_split)} rows")
 print(f"Label-Verteilung:\n{val_split['price_tier'].value_counts().sort_index()}\n")
 
-# ── 2. Predictions von Railway holen ─────────────────────────────────────────
+# ── 2. Request an Railway ─────────────────────────────────────────────────────
 print(f"Sende Request an {RAILWAY_URL}...")
 
 with open("/tmp/train_split.csv", "rb") as train_f, \
-     open("/tmp/val_features.csv", "rb") as val_f:
+     open("/tmp/val_features.csv", "rb") as val_f, \
+     open("/tmp/emb_train.csv", "rb") as emb_train_f, \
+     open("/tmp/emb_val.csv", "rb") as emb_val_f:
 
     response = requests.post(
         RAILWAY_URL,
         files={
-            "train_file":      ("train.csv",      train_f, "text/csv"),
-            "validation_file": ("validation.csv", val_f,   "text/csv"),
+            "train_file":           ("train.csv",      train_f,     "text/csv"),
+            "validation_file":      ("validation.csv", val_f,       "text/csv"),
+            "train_embeddings":     ("emb_train.csv",  emb_train_f, "text/csv"),
+            "validation_embeddings":("emb_val.csv",    emb_val_f,   "text/csv"),
         },
-        timeout=300,  # 5 Minuten — Training braucht Zeit
+        timeout=120,
     )
 
 if response.status_code != 200:
@@ -50,7 +53,7 @@ with open("/tmp/val_predictions.csv", "wb") as f:
 
 print("Predictions erhalten!\n")
 
-# ── 3. F1-Score berechnen ─────────────────────────────────────────────────────
+# ── 3. F1-Score berechnen ────────────────────────────────────────────────────
 y_true = val_split["price_tier"].values
 y_pred = pd.read_csv("/tmp/val_predictions.csv")["predicted_price_tier"].values
 
